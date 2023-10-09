@@ -3,7 +3,7 @@ indicator("PIN BAR", shorttitle="PIN", overlay=true, max_labels_count=500)
 
 // inputs
 atrRange = input.int(5, "ATR Length", tooltip="Bar size must be greater than this ATR to ignore small candles")
-wickRatio = input.float(0.66, "Major Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a strong PIN")
+wickRatio = input.float(0.75, "Major Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a strong PIN")
 wickRatio2 = input.float(0.40, "Minor Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a medium PIN")
 min_volume_threshold = input.int(1000, "Minimum Volume Threshold")
 
@@ -96,8 +96,8 @@ commonRulesL = commonRules and closeAboveMidpoint and priorBarDown
 
 
 // stronger/stricter pins
-pinbar_h = commonRulesH and upperWickSize >= wickRatio*barSize and isBarLarge and (upperWickSize > 3 * bodySize)
-pinbar_l = commonRulesL and lowerWickSize >= wickRatio*barSize and isBarLarge and (lowerWickSize > 3 * bodySize)
+pinbar_h = commonRulesH and upperWickSize >= wickRatio*barSize and isBarLarge
+pinbar_l = commonRulesL and lowerWickSize >= wickRatio*barSize and isBarLarge
 
 // weaker pins
 pinbar_h2 = commonRulesH and upperWickSize >= wickRatio2*barSize and not pinbar_h and isBarAverageSize and not (state_one or state_two)
