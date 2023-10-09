@@ -1,0 +1,112 @@
+//@version=5
+indicator("PIN BAR", shorttitle="PIN", overlay=true, max_labels_count=500)
+
+// inputs
+atrRange = input.int(5, "ATR Length", tooltip="Bar size must be greater than this ATR to ignore small candles")
+wickRatio = input.float(0.66, "Major Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a strong PIN")
+wickRatio2 = input.float(0.40, "Minor Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a medium PIN")
+min_volume_threshold = input.int(1000, "Minimum Volume Threshold")
+
+upperWickSize = high - math.max(open, close)
+lowerWickSize = math.min(open, close) - low
+bodySize = math.abs(close - open)
+
+priorBarUp = close[1]>open[1]
+priorBarDown = not priorBarUp
+priorBodyBigEnough = bodySize[1] >= (ta.ema(bodySize, atrRange) - ta.stdev(bodySize, atrRange))
+
+barSize = high - low
+isBarLarge = barSize >= ta.atr(atrRange) //+ ta.stdev(barSize, atrRange)
+isBarAverageSize = barSize >= (ta.atr(atrRange) - ta.stdev(barSize, atrRange))
+
+midpoint = (high - low) / 2
+closeSize = close - low
+closeBelowMidpoint = (closeSize <= midpoint)
+closeAboveMidpoint = (closeSize >= midpoint)
+
+min_volume_met = volume > min_volume_threshold
+
+// MA-based trend part (to determine PIN color)
+// need to make sure we keep this in sync with the MA-based trend code changes too
+getAverageType(averageType, averageSource, averageLength) =>
+	switch str.upper(averageType)
+        "SMA"  => ta.sma(averageSource, averageLength)
+        "EMA"  => ta.ema(averageSource, averageLength)
+        "VWMA" => ta.vwma(averageSource, averageLength)
+        => runtime.error("Moving average type '" + averageType + "' not found!"), na
+
+a_type = input.string("SMA", "high timeframe", ["SMA","EMA","VWMA"], group = "Moving Average Based Trend", inline = "1")
+b_type = input.string("EMA", "med timeframe", ["SMA","EMA","VWMA"], group = "Moving Average Based Trend", inline = "2")
+c_type = input.string("EMA", "low timeframe", ["SMA","EMA","VWMA"], group = "Moving Average Based Trend", inline = "3")
+
+a_length = input.int(defval = 105, title = "length", group ="Moving Average Based Trend", inline = "1")
+b_length = input.int(defval = 45, title = "length", group ="Moving Average Based Trend", inline = "2")
+c_length = input.int(defval = 9, title = "length", group ="Moving Average Based Trend", inline = "3")
+
+a_series = input.string("close", "source", ["open","close","hlc3"], group = "Moving Average Based Trend", inline = "1")
+b_series = input.string("close", "source", ["open","close","hlc3"], group = "Moving Average Based Trend", inline = "2")
+c_series = input.string("close", "source", ["open","close","hlc3"], group = "Moving Average Based Trend", inline = "3")
+
+getSeries(seriesName) =>
+	switch str.upper(seriesName)
+        "CLOSE"  => close
+        "OPEN"  => open
+        "HLC3"  => hlc3
+        => runtime.error("Series '" + seriesName + "' not found!"), na
+
+a = getAverageType(a_type, getSeries(a_series), a_length)
+b = getAverageType(b_type, getSeries(b_series), b_length)
+c = getAverageType(c_type, getSeries(c_series), c_length)
+
+state_one = c > b and b > a
+state_two = b > c and c > a
+state_three = a > c and c > b
+state_four = a > b and b > c
+
+var color_maxup = input.color(color.new(color.lime, 0), "bullish", group = "Trend-based Bar Color")
+var color_up = input.color(color.new(color.blue, 0), "bullish-neutral", group = "Trend-based Bar Color")
+var color_maxdown = input.color(color.new(color.red, 0), "bearish", group = "Trend-based Bar Color")
+var color_down = input.color(color.new(color.orange, 0), "bearish-neutral", group = "Trend-based Bar Color")
+var color_countertrend = input.color(color.new(color.gray, 70), "against-trend", group = "Trend-based Bar Color")
+var color_uncertain = input.color(color.new(color.fuchsia, 0), "uncertain", group = "Trend-based Bar Color")
+
+downPinColor = if state_four
+    color_maxdown
+else if state_three 
+    color_down
+else if state_one or state_two
+    color_countertrend
+else 
+    color_uncertain
+
+upPinColor = if state_one
+    color_maxup
+else if state_two 
+    color_up
+else if state_three or state_four
+    color_countertrend
+else 
+    color_uncertain
+
+bodyWithinPriorBar = math.max(open, close) <= high[1] and math.min(open, close) >= low[1]
+
+commonRules = priorBodyBigEnough and min_volume_met and bodyWithinPriorBar
+commonRulesH = commonRules and closeBelowMidpoint and priorBarUp
+commonRulesL = commonRules and closeAboveMidpoint and priorBarDown
+
+
+// stronger/stricter pins
+pinbar_h = commonRulesH and upperWickSize >= wickRatio*barSize and isBarLarge and (upperWickSize > 3 * bodySize)
+pinbar_l = commonRulesL and lowerWickSize >= wickRatio*barSize and isBarLarge and (lowerWickSize > 3 * bodySize)
+
+// weaker pins
+pinbar_h2 = commonRulesH and upperWickSize >= wickRatio2*barSize and not pinbar_h and isBarAverageSize and not (state_one or state_two)
+pinbar_l2 = commonRulesL and lowerWickSize >= wickRatio2*barSize and not pinbar_l and isBarAverageSize and not (state_three or state_four)
+
+// s = str.tostring(closeBelowMidpoint) + " " + str.tostring(isBarAverageSize) + " " + str.tostring(priorBarUp) + " " + str.tostring(priorBodyBigEnough) + " " + str.tostring(barSize) + " " + str.tostring(ta.atr(atrRange)) + " " + str.tostring(barSize_stdev)
+// label.new(bar_index, high, s)
+
+plotshape(pinbar_h,style=shape.triangledown,color=downPinColor, size = size.normal)
+plotshape(pinbar_l,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.normal)
+plotshape(pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.small)
+plotshape(pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.small)

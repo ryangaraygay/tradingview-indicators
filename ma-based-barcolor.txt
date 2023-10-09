@@ -2,7 +2,7 @@
 // © swoozshies
 
 //@version=5
-indicator("MA Based Trend", shorttitle = "MA_TREND", overlay=false)
+indicator("MA Based Trend BarColor", shorttitle = "MA_TREND_BARCOLOR", overlay=true)
 
 getAverageType(averageType, averageSource, averageLength) =>
 	switch str.upper(averageType)
@@ -34,16 +34,24 @@ a = getAverageType(a_type, getSeries(a_series), a_length)
 b = getAverageType(b_type, getSeries(b_series), b_length)
 c = getAverageType(c_type, getSeries(c_series), c_length)
 
+ht_color = input.color(color.red, "Color", inline = "1")
+mt_color = input.color(color.orange, "Color", inline = "2")
+lt_color = input.color(color.green, "Color", inline = "3")
+
+p1 = plot(a, color=ht_color)
+p2 = plot(b, color=mt_color)
+p3 = plot(c, color=lt_color)
+
 state_one = c > b and b > a
 state_two = b > c and c > a
 state_three = a > c and c > b
 state_four = a > b and b > c
 
-var color_maxup = input.color(color.new(color.green, 30), "bullish")
-var color_up = input.color(color.new(color.blue, 30), "bullish-neutral")
-var color_maxdown = input.color(color.new(color.red, 30), "bearish")
-var color_down = input.color(color.new(color.orange, 30), "bearish-neutral")
-var color_undefined = color.gray
+var color_maxup = input.color(color.new(color.green, 0), "bullish", group = "Trend-based Bar Color")
+var color_up = input.color(color.new(color.blue, 0), "bullish-neutral", group = "Trend-based Bar Color")
+var color_maxdown = input.color(color.new(color.red, 0), "bearish", group = "Trend-based Bar Color")
+var color_down = input.color(color.new(color.orange, 0), "bearish-neutral", group = "Trend-based Bar Color")
+var color_undefined = color.new(color.gray, 30)
 
 volume_color = if state_one
     color_maxup
@@ -56,4 +64,5 @@ else if state_four
 else
     color_undefined
 
-plot(1, "Moving Average Based Trend", volume_color, style = plot.style_columns)
+bodyColor = close > open ? na : volume_color
+plotcandle(open, high, low, close, color=bodyColor, wickcolor = volume_color, bordercolor = volume_color)

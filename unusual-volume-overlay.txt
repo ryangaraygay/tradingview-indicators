@@ -1,0 +1,27 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © swoozshies
+
+//@version=5
+indicator("Relative Volume", shorttitle = "RLTV VOL", overlay = true)
+
+volume_lookback = input.int(20, "Volume Lookback")
+min_volume_threshold = input.int(1000, "Minimum Volume Threshold")
+
+volume_avg = ta.ema(volume, volume_lookback)
+volume_stdev = ta.stdev(volume, volume_lookback)
+
+volume_diff = (volume - volume_avg)
+volume_threshold = (1.0*volume_stdev)
+unusual_volume = math.abs(volume_diff) > volume_threshold
+extreme_volume = (math.abs(volume_diff) > 2.0*volume_stdev)
+
+aboveVolume = volume_diff > volume_threshold
+belowVolume = volume_diff < -volume_threshold
+
+volume_transparency = volume > min_volume_threshold ? (extreme_volume ? 0 : 80) : 100
+volume_signal_color = if aboveVolume
+    color.new(color.aqua, volume_transparency)
+else if belowVolume
+    color.new(color.fuchsia, volume_transparency)
+
+plotshape(unusual_volume,style=shape.circle,color=volume_signal_color, size = size.tiny, location = location.belowbar)
