@@ -1,0 +1,59 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © swoozshies
+
+//@version=5
+indicator("MA Based Trend", shorttitle = "MA_TREND")
+
+getAverageType(averageType, averageSource, averageLength) =>
+	switch str.upper(averageType)
+        "SMA"  => ta.sma(averageSource, averageLength)
+        "EMA"  => ta.ema(averageSource, averageLength)
+        "VWMA" => ta.vwma(averageSource, averageLength)
+        => runtime.error("Moving average type '" + averageType + "' not found!"), na
+
+a_type = input.string("SMA", "high timeframe", ["SMA","EMA","VWMA"], "", "1", "")
+b_type = input.string("EMA", "med timeframe", ["SMA","EMA","VWMA"], "", "2", "")
+c_type = input.string("EMA", "low timeframe", ["SMA","EMA","VWMA"], "", "3", "")
+
+a_length = input.int(defval = 105, title = "length", group ="", inline = "1")
+b_length = input.int(defval = 45, title = "length", group ="", inline = "2")
+c_length = input.int(defval = 9, title = "length", group ="", inline = "3")
+
+a_series = input.string("close", "source", ["open","close","hlc3"], "", "1", "")
+b_series = input.string("close", "source", ["open","close","hlc3"], "", "2", "")
+c_series = input.string("close", "source", ["open","close","hlc3"], "", "3", "")
+
+getSeries(seriesName) =>
+	switch str.upper(seriesName)
+        "CLOSE"  => close
+        "OPEN"  => open
+        "HLC3"  => hlc3
+        => runtime.error("Series '" + seriesName + "' not found!"), na
+
+a = getAverageType(a_type, getSeries(a_series), a_length)
+b = getAverageType(b_type, getSeries(b_series), b_length)
+c = getAverageType(c_type, getSeries(c_series), c_length)
+
+state_one = c > b and b > a
+state_two = b > c and c > a
+state_three = a > c and c > b
+state_four = a > b and b > c
+
+var color_maxup = input.color(color.new(color.green, 30), "bullish")
+var color_up = input.color(color.new(color.blue, 30), "bullish-neutral")
+var color_maxdown = input.color(color.new(color.red, 30), "bearish")
+var color_down = input.color(color.new(color.orange, 30), "bearish-neutral")
+var color_undefined = color.gray
+
+volume_color = if state_one
+    color_maxup
+else if state_two
+    color_up
+else if state_three
+    color_down
+else if state_four
+    color_maxdown
+else
+    color_undefined
+
+plot(1, "Moving Average Based Trend", volume_color, style = plot.style_columns)

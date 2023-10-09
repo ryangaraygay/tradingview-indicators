@@ -1,0 +1,7 @@
+//@version=3
+study(title="VGF NYSE Ticks")
+x = security ("USI:TICK", period, close)
+c = x > x[1] ? green : red
+marker = input(title="marker", type=integer, defval=200)
+bgColour = (x > -marker and x < marker) ? gray : ((x >= marker) ? red : green)
+plot(x,style=histogram,color=bgColour,linewidth=4)

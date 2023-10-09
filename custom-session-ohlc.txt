@@ -1,0 +1,55 @@
+//@version=5
+indicator("Custom Session OHL", shorttitle = "CUST OHL", overlay=true)
+
+my_session = input.session("0830-0930", title='Custom Session')
+
+
+var color color_open = input.color(color.yellow, "Open", inline = "O")
+var bool extend_open = input.bool(true, "Extend", inline = "O")
+var string text_open = input.string("Open", "", inline = "O")
+
+var color color_high = input.color(color.blue, "High", inline = "H")
+var bool extend_high = input.bool(true, "Extend", inline = "H")
+var string text_high = input.string("High", "", inline = "H")
+
+var color color_low = input.color(color.orange, "Low", inline = "L")
+var bool extend_low = input.bool(true, "Extend", inline = "L")
+var string text_low = input.string("Low", "", inline = "L")
+
+var int label_offset = input.int(50, "Label Offset")
+
+in_session = time(timeframe.period, my_session)
+
+is_new_session(res, sess) =>
+    t = time(res, sess)
+    na(t[1]) and not na(t) or t[1] < t
+
+new_session = is_new_session("1440", my_session)
+
+is_newbar(res,sess) =>
+    t = time(res,sess)
+    not na(t) and (na(t[1]) or t > t[1])
+new = (is_newbar("1440", my_session) ? 1 : 0)
+
+var float reg_open = na
+reg_open := new_session ? open : in_session ? reg_open[1] : (extend_open ? reg_open[1] : na)
+plot_open = plot(reg_open, style = plot.style_circles, linewidth=1, color=color_open, title="open")
+
+var float reg_high = close
+var float reg_low = close
+reg_high := new_session ? high : in_session ? math.max(high, reg_high[1]) : (extend_high ? reg_high[1] : na)
+reg_low := new_session ? low : in_session ? math.min(low, reg_low[1]) : (extend_low ? reg_low[1] : na)
+plot(reg_high, style=plot.style_circles, color=color_high, linewidth=1, title="high")
+plot(reg_low, style=plot.style_circles, color=color_low, linewidth=1, title="low")
+
+var label_open = label.new(na, na, text = text_open, style = label.style_none, textcolor = color_open)
+label.set_x(label_open, bar_index + label_offset)
+label.set_y(label_open, reg_open[0])
+
+var label_high = label.new(na, na, text = text_high, style = label.style_none, textcolor = color_high)
+label.set_x(label_high, bar_index + label_offset)
+label.set_y(label_high, reg_high[0])
+
+var label_low = label.new(na, na, text = text_low, style = label.style_none, textcolor = color_low)
+label.set_x(label_low, bar_index + label_offset)
+label.set_y(label_low, reg_low[0])

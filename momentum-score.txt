@@ -1,0 +1,18 @@
+//@version=3
+study("Gray Fund - Momentum Score")
+
+l12m = (close/close[360])-1
+l6m = (close/close[180])-1
+l3m = (close/close[90])-1
+l1m = (close/close[30])-1
+weighted_momentum = (12*l1m)+(4*l3m)+(2*l6m)+l12m
+weighted_momentum_136 = ((0.33*l1m)+(0.33*l3m)+(0.34*l6m))*19
+
+ind_color = if weighted_momentum > 0
+    green
+else
+    red
+
+plot(weighted_momentum, title='Weighted', style=area, color=ind_color, transp=70)
+plot(weighted_momentum_136, title='Weighted 1-3-6', style=line, color=blue, transp=70)
+plot(0)

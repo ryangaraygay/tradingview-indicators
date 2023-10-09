@@ -1,0 +1,34 @@
+//@version=5
+indicator(title="Inverse Choppiness Index", shorttitle="TREND", format=format.price, precision=2, timeframe="", timeframe_gaps=true)
+
+length = input.int(14, minval=1)
+ci = 100 * math.log10(math.sum(ta.atr(1), length) / (ta.highest(length) - ta.lowest(length))) / math.log10(length)
+inverse_ci = (ci * -1) + 50
+offset = input.int(0, "Offset",  minval = -500, maxval = 500)
+
+var color_veryhigh = input.color(color.new(color.red, 30), "very high")
+var color_high = input.color(color.new(color.orange, 30), "high")
+var color_low = input.color(color.new(color.blue, 30), "low")
+var color_verylow = input.color(color.new(color.green, 30), "very low")
+
+color_ci = ci > 61.8 ? color_veryhigh: (ci > 50 ? color_high : (ci > 38.2 ? color_low : color_verylow))
+
+plot(inverse_ci, "CHOP", color=color_ci, offset = offset, style = plot.style_columns)
+
+adxlen = input(14, title="ADX Smoothing")
+dilen = input(14, title="DI Length")
+dirmov(len) =>
+	up = ta.change(high)
+	down = -ta.change(low)
+	plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+	minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+	truerange = ta.rma(ta.tr, len)
+	plus = fixnan(100 * ta.rma(plusDM, len) / truerange)
+	minus = fixnan(100 * ta.rma(minusDM, len) / truerange)
+	[plus, minus]
+adx(dilen, adxlen) =>
+	[plus, minus] = dirmov(dilen)
+	sum = plus + minus
+	adx = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+sig = adx(dilen, adxlen) - 20
+plot(sig, color=color.red, title="ADX")

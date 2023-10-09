@@ -1,0 +1,17 @@
+//@version=3
+study(title = "Anchored VWAP", shorttitle = "AVWAP", overlay = true)
+
+src = input(hlc3)
+
+y = input(2019, minval = 1, maxval = 2099, type = integer, title = 'Year')
+m = input(1, minval = 1, maxval = 12, type = integer, title = 'Month')
+d = input(3, minval = 1, maxval = 31, type = integer, title = 'Day')
+
+start = (y == year and m == month and d == dayofmonth(time))
+
+sumSrc = src * volume
+sumVol = volume
+sumSrc := start ? sumSrc : sumSrc + sumSrc[1]
+sumVol := start ? sumVol : sumVol + sumVol[1]
+
+plot(sumSrc / sumVol, title = "AVWAP")

@@ -1,0 +1,29 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © swoozshies
+
+//@version=5
+indicator("Signficant Unusual Volume", shorttitle = "LRG VOL")
+volume_avg = ta.sma(volume, 20)
+volume_stdev = ta.stdev(volume, 20)
+volume_current = volume
+volume_difference = volume - (volume_avg + (1.0*volume_stdev))
+
+max_value = 10000
+min_value = 0
+
+extreme_volume = (volume_difference > max_value)
+volume_plot = extreme_volume ? max_value : (volume_difference < min_value) ? min_value : volume_difference
+
+up_or_down = (close > open)
+
+var color_maxup = input.color(color.new(color.green, 30), "very high up volume")
+var color_up = input.color(color.new(color.blue, 30), "high up volume")
+var color_maxdown = input.color(color.new(color.red, 30), "very high down volume")
+var color_down = input.color(color.new(color.orange, 30), "high down volume")
+
+volume_color = extreme_volume ? (up_or_down ? color_maxup : color_maxdown) : (up_or_down ? color_up : color_down)
+
+plot(volume_plot, "large volume", volume_color, style = plot.style_columns)
+plot(volume_avg, "moving average", color = color.aqua, style = plot.style_line)
+//plot(10000, "large volume", color.new(color.gray, 90), style = plot.style_cross)
+//plot(volume_stdev)
