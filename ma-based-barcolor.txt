@@ -67,4 +67,4 @@ else
 bodyColor = close > open ? na : volume_color
 plotcandle(open, high, low, close, color=bodyColor, wickcolor = volume_color, bordercolor = volume_color)
 
-alertcondition(volume_color != volume_color[1], "MA-based Trend Changed Alert", "Moving Average based Trend has changed.")
+alertcondition(barstate.isconfirmed and volume_color != volume_color[1], "MA-based Trend Changed Alert", "Moving Average based Trend has changed.")

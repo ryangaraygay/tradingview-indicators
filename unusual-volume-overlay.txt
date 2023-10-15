@@ -28,4 +28,4 @@ else if belowVolume
 
 plotshape(unusual_volume,style=shape.circle,color=volume_signal_color, size = size.tiny, location = location.belowbar)
 
-alertcondition(aboveMinimumThreshold and extreme_volume and aboveVolume, "Significant Volume Alert", "Volume is above 2 standard deviations above average.")
+alertcondition(aboveMinimumThreshold and extreme_volume and aboveVolume, "Significant Volume Alert", "{{exchange}}:{{ticker}} volume of {{volume}} is 2 standard deviations above average.")
