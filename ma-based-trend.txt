@@ -57,3 +57,5 @@ else
     color_undefined
 
 plot(1, "Moving Average Based Trend", volume_color, style = plot.style_columns)
+
+alertcondition(volume_color != volume_color[1], "MA-based Trend Changed Alert", "Moving Average based Trend has changed.")

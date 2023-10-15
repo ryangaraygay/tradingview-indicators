@@ -153,3 +153,8 @@ pinbar_l3 = (hammer or engulfing_up) and not pinbar_l2
 
 plotshape(pinbar_h3,style=shape.xcross,color=color_tightenstops,location=location.abovebar,size = size.tiny)
 plotshape(pinbar_l3,style=shape.xcross,color=color_tightenstops,location=location.belowbar, size = size.tiny)
+
+alertcondition(pinbar_h or pinbar_h2, "Bearish PIN alert", "A bearish/down PIN candle was detected.")
+alertcondition(pinbar_l or pinbar_h2, "Bullish PIN alert", "A bullish/up PIN candle was detected.")
+alertcondition(pinbar_h3, "Bearish Countertrend", "A bearish countertrend condition was detected")
+alertcondition(pinbar_l3, "Bullish Countertrend", "A bullish countertrend condition was detected")

@@ -18,10 +18,14 @@ extreme_volume = (math.abs(volume_diff) > 2.0*volume_stdev)
 aboveVolume = volume_diff > volume_threshold
 belowVolume = volume_diff < -volume_threshold
 
-volume_transparency = volume > min_volume_threshold ? (extreme_volume ? 0 : 80) : 100
+aboveMinimumThreshold = volume > min_volume_threshold
+
+volume_transparency = aboveMinimumThreshold ? (extreme_volume ? 0 : 80) : 100
 volume_signal_color = if aboveVolume
     color.new(color.aqua, volume_transparency)
 else if belowVolume
     color.new(color.fuchsia, volume_transparency)
 
 plotshape(unusual_volume,style=shape.circle,color=volume_signal_color, size = size.tiny, location = location.belowbar)
+
+alertcondition(aboveMinimumThreshold and extreme_volume and aboveVolume, "Significant Volume Alert", "Volume is above 2 standard deviations above average.")

@@ -38,9 +38,9 @@ ht_color = input.color(color.red, "Color", inline = "1")
 mt_color = input.color(color.orange, "Color", inline = "2")
 lt_color = input.color(color.green, "Color", inline = "3")
 
-p1 = plot(a, color=ht_color)
-p2 = plot(b, color=mt_color)
-p3 = plot(c, color=lt_color)
+p1 = plot(a, "slow MA", color=ht_color)
+p2 = plot(b, "mid MA", color=mt_color)
+p3 = plot(c, "fast MA", color=lt_color)
 
 state_one = c > b and b > a
 state_two = b > c and c > a
@@ -66,3 +66,5 @@ else
 
 bodyColor = close > open ? na : volume_color
 plotcandle(open, high, low, close, color=bodyColor, wickcolor = volume_color, bordercolor = volume_color)
+
+alertcondition(volume_color != volume_color[1], "MA-based Trend Changed Alert", "Moving Average based Trend has changed.")
