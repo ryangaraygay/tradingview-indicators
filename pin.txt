@@ -115,13 +115,13 @@ d = array.new<string>(0)
 // array.push(d, str.tostring(isBarAverageSize) + "\n")
 // label.new(bar_index, high, str.tostring(d))
 
-barClosed = barstate.isconfirmed
+barComplete = barstate.isconfirmed
 
-plotshape(barClosed and pinbar_h,style=shape.triangledown,color=downPinColor, size = size.normal)
-plotshape(barClosed and pinbar_l,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.normal)
+plotshape(barComplete and pinbar_h,style=shape.triangledown,color=downPinColor, size = size.normal)
+plotshape(barComplete and pinbar_l,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.normal)
 
-plotshape(barClosed and pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.small)
-plotshape(barClosed and pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.small)
+plotshape(barComplete and pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.small)
+plotshape(barComplete and pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.small)
 
 // engulging candle reversal warnings (not necessarily fade but tighten stops)
 C_BodyHi = math.max(close, open)
@@ -153,10 +153,18 @@ engulfing_down = C_UpTrend and C_BlackBody and C_LongBody and C_WhiteBody[1] and
 pinbar_h3 = (shootingstar or engulfing_down) and not pinbar_h2
 pinbar_l3 = (hammer or engulfing_up) and not pinbar_l2
 
-plotshape(barClosed and pinbar_h3,style=shape.xcross,color=color_tightenstops,location=location.abovebar,size = size.tiny)
-plotshape(barClosed and pinbar_l3,style=shape.xcross,color=color_tightenstops,location=location.belowbar, size = size.tiny)
+plotshape(barComplete and pinbar_h3,style=shape.xcross,color=color_tightenstops,location=location.abovebar,size = size.tiny)
+plotshape(barComplete and pinbar_l3,style=shape.xcross,color=color_tightenstops,location=location.belowbar, size = size.tiny)
 
-alertcondition(barClosed and (pinbar_h or pinbar_h2), "Bearish PIN alert", "A bearish/down PIN candle was detected.")
-alertcondition(barClosed and (pinbar_l or pinbar_h2), "Bullish PIN alert", "A bullish/up PIN candle was detected.")
-alertcondition(barClosed and pinbar_h3, "Bearish Countertrend", "A bearish countertrend condition was detected")
-alertcondition(barClosed and pinbar_l3, "Bullish Countertrend", "A bullish countertrend condition was detected")
+alertcondition(barComplete and pinbar_h or pinbar_h2, "Bearish PIN alert", "A bearish/down PIN candle was detected.")
+alertcondition(barComplete and pinbar_l or pinbar_l2, "Bullish PIN alert", "A bullish/up PIN candle was detected.")
+alertcondition(barComplete and pinbar_h3, "Bearish Countertrend", "A bearish countertrend condition was detected")
+alertcondition(barComplete and pinbar_l3, "Bullish Countertrend", "A bullish countertrend condition was detected")
+
+failed_newlow = close > low[1]
+failed_newhigh = close < high[1]
+ipin_up = commonRules and priorBarDown and closeBelowMidpoint and upperWickSize >= wickRatio*barSize and isBarLarge and failed_newlow
+ipin_down = commonRules and priorBarUp and closeAboveMidpoint and lowerWickSize >= wickRatio*barSize and isBarLarge and failed_newhigh
+
+plotchar(barComplete and ipin_up,char='⬆',color=upPinColor,location=location.belowbar, size = size.tiny)
+plotchar(barComplete and ipin_down,char='⬇',color=downPinColor,location=location.abovebar, size = size.tiny)
