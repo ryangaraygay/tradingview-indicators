@@ -1,0 +1,18 @@
+//@version=5
+indicator(title="Elder Force Index", shorttitle="EFI", format=format.volume, timeframe="", timeframe_gaps=true)
+
+var cumVol = 0.
+cumVol += nz(volume)
+if barstate.islast and cumVol == 0
+    runtime.error("No volume is provided by the data vendor.")
+length = input.int(13, minval=1)
+efi = ta.ema(ta.change(close) * volume, length)
+
+upColor = input.color(color.new(color.aqua, 50), "up force")
+downColor = input.color(color.new(color.fuchsia, 50), "down force")
+
+// plot(efi, color=efi>0?upColor:downColor, title="Elder Force Index", style = plot.style_columns)
+// plot(ta.sma(efi, 9))
+
+efix = efi - ta.sma(efi, 9)
+plot(efix, color=efi>0?upColor:downColor, title="Elder Force Index", style = plot.style_columns)
