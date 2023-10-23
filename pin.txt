@@ -6,6 +6,7 @@ atrRange = input.int(5, "ATR Length", tooltip="Bar size must be greater than thi
 wickRatio = input.float(0.66, "Major Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a strong PIN")
 wickRatio2 = input.float(0.40, "Minor Wick To Bar Height Ratio", tooltip="How much larger the signal wicks should be compared to whole candle for a medium PIN")
 min_volume_threshold = input.int(1000, "Minimum Volume Threshold")
+standout_lookback = input.int(5, title = "Standout lookback", tooltip = "Number of bars to lookback to check if the pin nose/tail stands out.")
 
 upperWickSize = high - math.max(open, close)
 lowerWickSize = math.min(open, close) - low
@@ -67,8 +68,8 @@ var color_maxup = input.color(color.new(color.lime, 0), "bullish", group = "Tren
 var color_up = input.color(color.new(color.blue, 0), "bullish-neutral", group = "Trend-based Bar Color")
 var color_maxdown = input.color(color.new(color.red, 0), "bearish", group = "Trend-based Bar Color")
 var color_down = input.color(color.new(color.orange, 0), "bearish-neutral", group = "Trend-based Bar Color")
-var color_countertrend = input.color(color.new(color.gray, 70), "against-trend", group = "Trend-based Bar Color")
-var color_tightenstops = input.color(color.new(color.gray, 70), "tighten-stops", group = "Trend-based Bar Color")
+var color_countertrend = input.color(color.new(color.gray, 30), "against-trend", group = "Trend-based Bar Color")
+var color_tightenstops = input.color(color.new(color.gray, 30), "tighten-stops", group = "Trend-based Bar Color")
 var color_uncertain = input.color(color.new(color.fuchsia, 0), "uncertain", group = "Trend-based Bar Color")
 
 downPinColor = if state_four
@@ -91,9 +92,12 @@ else
 
 bodyWithinPriorBar = math.max(open, close) <= high[1] and math.min(open, close) >= low[1]
 
+isStandoutHigh = ta.highest(standout_lookback)[1] < high
+isStandoutLow = ta.lowest(standout_lookback)[1] > low
+
 commonRules = priorBodyBigEnough and min_volume_met and bodyWithinPriorBar
-commonRulesH = commonRules and closeBelowMidpoint and priorBarUp
-commonRulesL = commonRules and closeAboveMidpoint and priorBarDown
+commonRulesH = commonRules and closeBelowMidpoint and priorBarUp and isStandoutHigh
+commonRulesL = commonRules and closeAboveMidpoint and priorBarDown and isStandoutLow
 
 // stronger/stricter pins
 pinbar_h = commonRulesH and upperWickSize >= wickRatio*barSize and isBarLarge
@@ -116,12 +120,6 @@ d = array.new<string>(0)
 // label.new(bar_index, high, str.tostring(d))
 
 barComplete = barstate.isconfirmed
-
-plotshape(barComplete and pinbar_h,style=shape.triangledown,color=downPinColor, size = size.normal)
-plotshape(barComplete and pinbar_l,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.normal)
-
-plotshape(barComplete and pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.small)
-plotshape(barComplete and pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.small)
 
 // engulging candle reversal warnings (not necessarily fade but tighten stops)
 C_BodyHi = math.max(close, open)
@@ -153,13 +151,19 @@ engulfing_down = C_UpTrend and C_BlackBody and C_LongBody and C_WhiteBody[1] and
 pinbar_h3 = (shootingstar or engulfing_down) and not pinbar_h2
 pinbar_l3 = (hammer or engulfing_up) and not pinbar_l2
 
-plotshape(barComplete and pinbar_h3,style=shape.xcross,color=color_tightenstops,location=location.abovebar,size = size.tiny)
-plotshape(barComplete and pinbar_l3,style=shape.xcross,color=color_tightenstops,location=location.belowbar, size = size.tiny)
-
 alertcondition(barComplete and pinbar_h or pinbar_h2, "Bearish PIN alert", "A bearish/down PIN candle was detected.")
 alertcondition(barComplete and pinbar_l or pinbar_l2, "Bullish PIN alert", "A bullish/up PIN candle was detected.")
 alertcondition(barComplete and pinbar_h3, "Bearish Countertrend", "A bearish countertrend condition was detected")
 alertcondition(barComplete and pinbar_l3, "Bullish Countertrend", "A bullish countertrend condition was detected")
+
+plotshape(barComplete and pinbar_h,style=shape.triangledown,color=downPinColor, size = size.normal)
+plotshape(barComplete and pinbar_l,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.normal)
+
+plotshape(barComplete and pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.small)
+plotshape(barComplete and pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.small)
+
+plotshape(barComplete and pinbar_h3,style=shape.xcross,color=color_tightenstops,location=location.abovebar,size = size.tiny)
+plotshape(barComplete and pinbar_l3,style=shape.xcross,color=color_tightenstops,location=location.belowbar, size = size.tiny)
 
 failed_newlow = close > low[1]
 failed_newhigh = close < high[1]
