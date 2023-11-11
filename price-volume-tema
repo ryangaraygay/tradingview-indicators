@@ -1,0 +1,13 @@
+//@version=5
+indicator(title="VGF Price-Volume TEMA", shorttitle="PV-TEMA", overlay=false, timeframe="", timeframe_gaps=true)
+import TradingView/ta/5
+
+length = input.int(21, minval=1)
+
+bv = (close-open) * volume // body x volume
+bvema1 = ta.ema(bv, length)
+bvema2 = ta.ema(bvema1, length)
+bvema3 = ta.ema(bvema2, length)
+bvout = 3 * (bvema1 - bvema2) + bvema3
+
+plot(bvout, "VTEMA", color=(bvout > 0 ? color.new(color.aqua, 60) : color.new(color.fuchsia, 60)), style = plot.style_columns)
