@@ -27,68 +27,11 @@ closeAboveMidpoint = (closeSize >= midpoint)
 
 min_volume_met = volume > min_volume_threshold
 
-// MA-based trend part (to determine PIN color)
-// need to make sure we keep this in sync with the MA-based trend code changes too
-getAverageType(averageType, averageSource, averageLength) =>
-	switch str.upper(averageType)
-        "SMA"  => ta.sma(averageSource, averageLength)
-        "EMA"  => ta.ema(averageSource, averageLength)
-        "VWMA" => ta.vwma(averageSource, averageLength)
-        => runtime.error("Moving average type '" + averageType + "' not found!"), na
+var color_maxup = input.color(color.new(color.lime, 0), "bullish", group = "Signal Color")
+var color_maxdown = input.color(color.new(color.red, 0), "bearish", group = "Signal Color")
 
-a_type = input.string("SMA", "high timeframe", ["SMA","EMA","VWMA"], group = "Moving Average Based Trend", inline = "1")
-b_type = input.string("EMA", "med timeframe", ["SMA","EMA","VWMA"], group = "Moving Average Based Trend", inline = "2")
-c_type = input.string("EMA", "low timeframe", ["SMA","EMA","VWMA"], group = "Moving Average Based Trend", inline = "3")
-
-a_length = input.int(defval = 105, title = "length", group ="Moving Average Based Trend", inline = "1")
-b_length = input.int(defval = 45, title = "length", group ="Moving Average Based Trend", inline = "2")
-c_length = input.int(defval = 9, title = "length", group ="Moving Average Based Trend", inline = "3")
-
-a_series = input.string("close", "source", ["open","close","hlc3"], group = "Moving Average Based Trend", inline = "1")
-b_series = input.string("close", "source", ["open","close","hlc3"], group = "Moving Average Based Trend", inline = "2")
-c_series = input.string("close", "source", ["open","close","hlc3"], group = "Moving Average Based Trend", inline = "3")
-
-getSeries(seriesName) =>
-	switch str.upper(seriesName)
-        "CLOSE"  => close
-        "OPEN"  => open
-        "HLC3"  => hlc3
-        => runtime.error("Series '" + seriesName + "' not found!"), na
-
-a = getAverageType(a_type, getSeries(a_series), a_length)
-b = getAverageType(b_type, getSeries(b_series), b_length)
-c = getAverageType(c_type, getSeries(c_series), c_length)
-
-state_one = c > b and b > a
-state_two = b > c and c > a
-state_three = a > c and c > b
-state_four = a > b and b > c
-
-var color_maxup = input.color(color.new(color.lime, 0), "bullish", group = "Trend-based Bar Color")
-var color_up = input.color(color.new(color.blue, 0), "bullish-neutral", group = "Trend-based Bar Color")
-var color_maxdown = input.color(color.new(color.red, 0), "bearish", group = "Trend-based Bar Color")
-var color_down = input.color(color.new(color.orange, 0), "bearish-neutral", group = "Trend-based Bar Color")
-var color_countertrend = input.color(color.new(color.gray, 30), "against-trend", group = "Trend-based Bar Color")
-var color_tightenstops = input.color(color.new(color.gray, 30), "tighten-stops", group = "Trend-based Bar Color")
-var color_uncertain = input.color(color.new(color.fuchsia, 0), "uncertain", group = "Trend-based Bar Color")
-
-downPinColor = if state_four
-    color_maxdown
-else if state_three 
-    color_down
-else if state_one or state_two
-    color_countertrend
-else 
-    color_uncertain
-
-upPinColor = if state_one
-    color_maxup
-else if state_two 
-    color_up
-else if state_three or state_four
-    color_countertrend
-else 
-    color_uncertain
+downPinColor = color_maxdown
+upPinColor = color_maxup
 
 bodyWithinPriorBar = math.max(open, close) <= high[1] and math.min(open, close) >= low[1]
 
@@ -103,14 +46,14 @@ commonRulesL = commonRules and closeAboveMidpoint and priorBarDown and isStandou
 pinbar_h = commonRulesH and upperWickSize >= wickRatio*barSize and isBarLarge
 pinbar_l = commonRulesL and lowerWickSize >= wickRatio*barSize and isBarLarge
 
-// weaker pins
+// // weaker pins
 shootingstar = commonRulesH and upperWickSize >= wickRatio2*barSize and not pinbar_h and isBarAverageSize
 hammer = commonRulesL and lowerWickSize >= wickRatio2*barSize and not pinbar_l and isBarAverageSize
 
-pinbar_h2 = shootingstar and not (state_one or state_two)
-pinbar_l2 = hammer and not (state_three or state_four)
+pinbar_h2 = shootingstar
+pinbar_l2 = hammer
 
-d = array.new<string>(0)
+// d = array.new<string>(0)
 // array.push(d, str.tostring(priorBodyBigEnough) + "\n")
 // array.push(d, str.tostring(min_volume_met) + "\n")
 // array.push(d, str.tostring(bodyWithinPriorBar) + "\n")
@@ -121,49 +64,11 @@ d = array.new<string>(0)
 
 barComplete = barstate.isconfirmed
 
-// engulging candle reversal warnings (not necessarily fade but tighten stops)
-C_BodyHi = math.max(close, open)
-C_BodyLo = math.min(close, open)
-C_Body = C_BodyHi - C_BodyLo
-C_BodyAvg = ta.ema(C_Body, atrRange)
-C_SmallBody = C_Body < C_BodyAvg
-C_LongBody = C_Body > C_BodyAvg
-C_WhiteBody = open < close
-C_BlackBody = open > close
-
-C_DownTrend = state_four or state_three
-C_UpTrend = state_one or state_two
-
-engulfing_up = C_DownTrend and C_WhiteBody and C_LongBody and C_BlackBody[1] and C_SmallBody[1] and close >= open[1] and open <= close[1] and ( close > open[1] or open < close[1] )
-engulfing_down = C_UpTrend and C_BlackBody and C_LongBody and C_WhiteBody[1] and C_SmallBody[1] and close <= open[1] and open >= close[1] and ( close < open[1] or open > close[1] )
-
-// d.clear()
-// array.push(d, str.tostring(C_WhiteBody) + "\n")
-// array.push(d, str.tostring(C_LongBody) + "\n")
-// array.push(d, str.tostring(C_BlackBody[1]) + "\n")
-// array.push(d, str.tostring(C_SmallBody[1]) + "\n")
-// array.push(d, str.tostring(close >= open[1]) + "\n")
-// array.push(d, str.tostring(open <= close[1]) + "\n")
-// array.push(d, str.tostring( close > open[1] or open < close[1] ) + "\n")
-// label.new(bar_index, high, str.tostring(d))
-
-// weak counter-trend useful for trail management
-pinbar_h3 = (shootingstar or engulfing_down) and not pinbar_h2
-pinbar_l3 = (hammer or engulfing_up) and not pinbar_l2
-
-alertcondition(barComplete and pinbar_h or pinbar_h2, "Bearish PIN alert", "A bearish/down PIN candle was detected.")
-alertcondition(barComplete and pinbar_l or pinbar_l2, "Bullish PIN alert", "A bullish/up PIN candle was detected.")
-alertcondition(barComplete and pinbar_h3, "Bearish Countertrend", "A bearish countertrend condition was detected")
-alertcondition(barComplete and pinbar_l3, "Bullish Countertrend", "A bullish countertrend condition was detected")
-
 plotshape(barComplete and pinbar_h,style=shape.triangledown,color=downPinColor, size = size.normal)
 plotshape(barComplete and pinbar_l,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.normal)
 
-plotshape(barComplete and pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.small)
-plotshape(barComplete and pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.small)
-
-plotshape(barComplete and pinbar_h3,style=shape.xcross,color=color_tightenstops,location=location.abovebar,size = size.tiny)
-plotshape(barComplete and pinbar_l3,style=shape.xcross,color=color_tightenstops,location=location.belowbar, size = size.tiny)
+plotshape(barComplete and pinbar_h2,style=shape.triangledown,color=downPinColor, size = size.tiny)
+plotshape(barComplete and pinbar_l2,style=shape.triangleup,color=upPinColor,location=location.belowbar, size = size.tiny)
 
 failed_newlow = close > low[1]
 failed_newhigh = close < high[1]
@@ -172,3 +77,6 @@ ipin_down = commonRules and priorBarUp and closeAboveMidpoint and lowerWickSize 
 
 plotchar(barComplete and ipin_up,char='⬆',color=upPinColor,location=location.belowbar, size = size.tiny)
 plotchar(barComplete and ipin_down,char='⬇',color=downPinColor,location=location.abovebar, size = size.tiny)
+
+alertcondition(barComplete and pinbar_h or pinbar_h2 or ipin_down, "Bearish PIN alert", "A bearish/down PIN candle was detected.")
+alertcondition(barComplete and pinbar_l or pinbar_l2 or ipin_up, "Bullish PIN alert", "A bullish/up PIN candle was detected.")
