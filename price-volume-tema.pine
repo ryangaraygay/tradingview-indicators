@@ -1,8 +1,12 @@
 //@version=5
-indicator(title="VGF Price-Volume TEMA", shorttitle="PV-TEMA", overlay=false, timeframe="", timeframe_gaps=true)
-import TradingView/ta/5
+indicator(title="VGF Price-Volume TEMA", shorttitle="PV-TEMA", overlay=true, timeframe="", timeframe_gaps=true)
+// import TradingView/ta/5
 
 length = input.int(21, minval=1)
+upColor = input.color(color.new(color.blue, 0), "up color")
+downColor = input.color(color.new(color.orange, 0), "down color")
+messyColor = input.color(color.black, "messy color")
+messy = input.int(1500, "messy range", tooltip = "values smaller than this is considered non-trending/messy")
 
 bv = (close-open) * volume // body x volume
 bvema1 = ta.ema(bv, length)
@@ -10,4 +14,57 @@ bvema2 = ta.ema(bvema1, length)
 bvema3 = ta.ema(bvema2, length)
 bvout = 3 * (bvema1 - bvema2) + bvema3
 
-plot(bvout, "VTEMA", color=(bvout > 0 ? color.new(color.aqua, 60) : color.new(color.fuchsia, 60)), style = plot.style_columns)
+b = math.abs(bvout)
+b2 = math.abs(bvout[1])
+b3 = math.abs(bvout[2])
+
+isMessy = b < messy and b2 < messy and b3 < messy
+
+upCandle = close > open
+
+countertrend_transparency = input.int(70, title="countertrend transparency")
+
+// series color c = input.color(color.gray, title="pending candle")
+
+color c = na
+
+// Function to check if the current bar is inside the previous bar
+isInsideBar(currentHigh, currentLow, previousHigh, previousLow) =>
+    currentHigh <= previousHigh and currentLow >= previousLow
+
+// Get the high and low values of the last three bars
+currentHigh = high
+currentLow = low
+previousHigh = high[1]
+previousLow = low[1]
+priorHigh = high[2]
+priorLow = low[2]
+
+// Check for the single inside bar pattern
+singleInsideBarPattern = isInsideBar(currentHigh, currentLow, previousHigh, previousLow)
+
+// Check for the double inside bar pattern
+doubleInsideBarPattern = singleInsideBarPattern and isInsideBar(previousHigh, previousLow, priorHigh, priorLow)
+
+// Function to check if the current bar is outside the previous bar
+isOutsideBar(currentHigh, currentLow, previousHigh, previousLow) =>
+    currentHigh > previousHigh and currentLow < previousLow
+
+// Check for the outside bar pattern
+outsideBarPattern = isOutsideBar(currentHigh, currentLow, previousHigh, previousLow)
+
+string my_session = input.session("0830-1500", title='New York Session')
+timeinrange(res, sess) => not na(time(res, sess)) ? true : false
+in_session = timeinrange(timeframe.period, my_session)
+
+if (in_session and doubleInsideBarPattern)
+    c := color.gray
+else if (in_session and outsideBarPattern)
+    c := upCandle ? color.green : color.red
+else
+    c := isMessy ? color.black : (bvout > 0 ? color.new(upColor, upCandle ? 0 : countertrend_transparency) : color.new(downColor, not upCandle ? 0 : countertrend_transparency))
+
+barcolor(c)
+
+colorchanged = c != c[1]
+alertcondition(barstate.isconfirmed and colorchanged, "Price Volume alert", "A change in price-volume trend has been detected.")

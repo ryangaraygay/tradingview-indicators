@@ -1,0 +1,30 @@
+//@version=5
+indicator("Z-Score Highlighter", overlay=true)
+
+// Function to calculate the Z-score
+zscore(src, length) =>
+    mean = ta.sma(src, length)
+    stdev = ta.stdev(src, length)
+    (src - mean) / stdev
+
+// Input parameters
+length = input(20, title="Z-Score Length")
+threshold = input(2, title="Z-Score Threshold")
+
+// Calculate the Z-score of the closing price
+z = zscore(close, length)
+
+// Highlight bars where the Z-score is above the threshold
+highlightCondition = z > threshold
+highlightConditionB = z < -threshold
+
+
+string my_session = input.session("0830-1500", title='NYSession')
+timeinrange(res, sess) => not na(time(res, sess)) ? true : false
+in_session = timeinrange(timeframe.period, my_session)
+
+// Plot a circle at the high price when the condition is met
+plotshape(series=highlightCondition and in_session, location=location.abovebar, color=color.blue, style=shape.xcross, size=size.tiny, title="Z-Score High")
+plotshape(series=highlightConditionB and in_session, location=location.belowbar, color=color.orange, style=shape.xcross, size=size.tiny, title="Z-Score Low")
+
+alertcondition(barstate.isconfirmed and in_session and (highlightCondition or highlightConditionB), "Outlier take profit alert", "An outlier has been detected. Considering take profit or tightening.")
