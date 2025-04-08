@@ -1,0 +1,89 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © swoozshies
+
+//@version=6
+indicator("Trend Score History", overlay = false)
+
+atr_length = input.int(14, "ATR Length")
+atr_low_level = input.float(4.0, "Low ATR Level")
+uptrend_color = input.color(color.green, "uptrend color")
+downtrend_color = input.color(color.red, "downtrend color")
+
+atr = ta.atr(atr_length)
+
+float source = input.source(hlc3, "Source", tooltip="", inline="", group="Volume Weighted Average Price")
+string my_session = input.session("0830-1600", title='Custom Session')
+timeinrange(res, sess) => not na(time(res, sess))
+in_session = timeinrange("1", my_session)
+newYorkVwap = ta.vwap(source, in_session[0] and not in_session[1])
+vwapValue = in_session ? newYorkVwap  : na
+
+// price-volume
+bv = (close-open) * volume // body x volume
+bv_length = 21 // TODO input
+bvema1 = ta.ema(bv, bv_length)
+bvema2 = ta.ema(bvema1, bv_length)
+bvema3 = ta.ema(bvema2, bv_length)
+bvout = 3 * (bvema1 - bvema2) + bvema3
+
+b = math.abs(bvout)
+b2 = math.abs(bvout[1])
+b3 = math.abs(bvout[2])
+
+messy = 1500 // TODO input messy
+isMessy = b < messy and b2 < messy and b3 < messy
+
+// ema-band
+ema9 = ta.ema(close, 9)
+ema21 = ta.ema(close, 21)
+
+// donchian
+length = input(20, title="Channel Length")
+lower_tf = input.timeframe("1", title="Lower Timeframe")
+
+// Function to get Donchian Channel values from a lower timeframe
+[lower_tf_upper, lower_tf_lower] = request.security(syminfo.tickerid, lower_tf, [ta.highest(high, length), ta.lowest(low, length)])
+
+var string lastSignalType = ""
+if (lower_tf_upper > lower_tf_upper[1])
+    lastSignalType := "long"
+else if (lower_tf_lower < lower_tf_lower[1])
+    lastSignalType := "short"
+
+vwap_diff = close - vwapValue
+
+string openrange_session = input.session("0830-0845", title='Opening Range Session')
+in_openrange_session = timeinrange(timeframe.period, openrange_session)
+
+string post_openrange_session = input.session("0846-1600", title='Post Opening Range Session')
+in_post_openrange_session = timeinrange(timeframe.period, post_openrange_session)
+
+is_new_session(res, sess) =>
+    t = time(res, sess)
+    na(t[1]) and not na(t) or t[1] < t
+
+new_openrange_session = is_new_session("1440", openrange_session)
+
+var float reg_high = close
+var float reg_low = close
+reg_high := new_openrange_session ? high : in_openrange_session ? math.max(high, reg_high[1]) : reg_high[1]
+reg_low := new_openrange_session ? low : in_openrange_session ? math.min(low, reg_low[1]) : reg_low[1]
+
+ref_close = close
+openrange_diff = ref_close > reg_high[0] ? (ref_close - reg_high[0]) : (ref_close < reg_low[0] ? ref_close - reg_low[0] : na)
+openrange_score = na(openrange_diff) ? 0 : (openrange_diff > 0 ? 1 : -1)
+
+vwap_score = na(vwap_diff) ? 0 : (vwap_diff > 0 ? 1 : -1)
+emaband_score = (ema9 - ema21) > 0 ? 1 : -1
+pricevolume_score = (isMessy or bvout ==0) ? 0 :(bvout > 0 ? 1 : -1)
+donchian_score = (lastSignalType == "long" ? 1 : -1)
+trend_score = vwap_score + emaband_score + pricevolume_score + donchian_score + (in_post_openrange_session ? openrange_score : 0)
+
+series color trend_color = na
+
+if barstate.isconfirmed
+    trend_color := atr < atr_low_level ? color.new(color.gray, 70) : (trend_score == 0 ? color.black : (trend_score > 0 ? color.from_gradient(trend_score, 0, 4, color.white, uptrend_color) : color.from_gradient(trend_score, -4, 0, downtrend_color, color.white)))
+
+plot(trend_score, style = plot.style_columns, color = trend_color)
+plot(5, color = color.new(color.gray, 50))
+plot(-5, color = color.new(color.gray, 50))
