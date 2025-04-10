@@ -1,0 +1,50 @@
+//@version=6
+indicator("1-Minute ATR Table", overlay=true)
+
+// === Display Settings ===
+var string GP2 = "Display"
+string  tableYposInput = input.string("bottom", "Panel position", inline = "11", options = ["top", "middle", "bottom"], group = GP2)
+string  tableXposInput = input.string("left", "", inline = "11", options = ["left", "center", "right"], group = GP2)
+
+// === Pull 1-Minute ATR Values ===
+atr5  = request.security(syminfo.tickerid, "1", ta.atr(5))
+atr8  = request.security(syminfo.tickerid, "1", ta.atr(8))
+atr14 = request.security(syminfo.tickerid, "1", ta.atr(14))
+
+// === Define Multipliers ===
+mult5  = 1.5
+mult8  = 1.2
+mult14 = 1.0
+
+// === Calculate Stops ===
+stop5  = atr5 * mult5
+stop8  = atr8 * mult8
+stop14 = atr14 * mult14
+
+// === Create the Table ===
+var table atrTable = table.new(tableYposInput + "_" + tableXposInput, 4, 4, border_width = 1, frame_color=color.new(color.gray, 80), frame_width=1)
+
+if bar_index % 1 == 0
+    // Row 0: Column Headers
+    table.cell(atrTable, 0, 0, "1-Min Period", bgcolor=color.gray, text_color=color.white)
+    table.cell(atrTable, 1, 0, "ATR", bgcolor=color.gray, text_color=color.white)
+    table.cell(atrTable, 2, 0, "Multiplier", bgcolor=color.gray, text_color=color.white)
+    table.cell(atrTable, 3, 0, "Stop", bgcolor=color.gray, text_color=color.white)
+
+    // Row 1: ATR(5)
+    table.cell(atrTable, 0, 1, "ATR(5)", text_color=color.orange)
+    table.cell(atrTable, 1, 1, str.tostring(atr5, format.mintick), text_color=color.orange)
+    table.cell(atrTable, 2, 1, str.tostring(mult5, "#.##"), text_color=color.orange)
+    table.cell(atrTable, 3, 1, str.tostring(stop5, format.mintick), text_color=color.orange)
+
+    // Row 2: ATR(8)
+    table.cell(atrTable, 0, 2, "ATR(8)", text_color=color.teal)
+    table.cell(atrTable, 1, 2, str.tostring(atr8, format.mintick), text_color=color.teal)
+    table.cell(atrTable, 2, 2, str.tostring(mult8, "#.##"), text_color=color.teal)
+    table.cell(atrTable, 3, 2, str.tostring(stop8, format.mintick), text_color=color.teal)
+
+    // Row 3: ATR(14)
+    table.cell(atrTable, 0, 3, "ATR(14)", text_color=color.fuchsia)
+    table.cell(atrTable, 1, 3, str.tostring(atr14, format.mintick), text_color=color.fuchsia)
+    table.cell(atrTable, 2, 3, str.tostring(mult14, "#.##"), text_color=color.fuchsia)
+    table.cell(atrTable, 3, 3, str.tostring(stop14, format.mintick), text_color=color.fuchsia)
